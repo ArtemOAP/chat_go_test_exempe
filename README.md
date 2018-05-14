@@ -1,23 +1,5 @@
 # Chat Example
 
-This application shows how to use the
-[websocket](https://github.com/gorilla/websocket) package to implement a simple
-web chat application.
-
-## Running the example
-
-The example requires a working Go development environment. The [Getting
-Started](http://golang.org/doc/install) page describes how to install the
-development environment.
-
-Once you have Go up and running, you can download, build and run the example
-using the following commands.
-
-    $ go get github.com/gorilla/websocket
-    $ cd `go list -f '{{.Dir}}' github.com/gorilla/websocket/examples/chat`
-    $ go run *.go
-
-To use the chat example, open http://localhost:8080/ in your browser.
 
 ## Server
 
@@ -82,21 +64,8 @@ To improve efficiency under high load, the `writePump` function coalesces
 pending chat messages in the `send` channel to a single WebSocket message. This
 reduces the number of system calls and the amount of data sent over the
 network.
+JWT verification
 
 ## Frontend
 
-The frontend code is in [home.html](https://github.com/gorilla/websocket/blob/master/examples/chat/home.html).
 
-On document load, the script checks for websocket functionality in the browser.
-If websocket functionality is available, then the script opens a connection to
-the server and registers a callback to handle messages from the server. The
-callback appends the message to the chat log using the appendLog function.
-
-To allow the user to manually scroll through the chat log without interruption
-from new messages, the `appendLog` function checks the scroll position before
-adding new content. If the chat log is scrolled to the bottom, then the
-function scrolls new content into view after adding the content. Otherwise, the
-scroll position is not changed.
-
-The form handler writes the user input to the websocket and clears the input
-field.

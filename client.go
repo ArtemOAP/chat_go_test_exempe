@@ -10,9 +10,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/websocket"
-	"fmt"
 	"encoding/json"
+	"github.com/robbert229/jwt"
+	"errors"
+	"fmt"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -43,6 +46,7 @@ type Message struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	Message  string `json:"message"`
+	Token    string `json:"token"`
 }
 
 // Client is a middleman between the websocket connection and the hub.
@@ -78,32 +82,12 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-
-		fmt.Printf("%+v\n",string(message))
-
-		var msg Message
-
-		fmt.Printf("%+v\n", msg)
-
-
-		er:= json.Unmarshal(message, &msg)
-		//TODO err != nill
-
-
-		fmt.Printf("%+v\n", er)
-		fmt.Printf("%+v\n", msg)
-
-		//TODO
-		if msg.Username == "jons"{
-			c.conn.Close()
+		e, msg := c.Verification(message)
+		if e != nil {
 			return
 		}
 
-
-		//fmt.Printf("%+v\n", string(message))
-
 		message = bytes.TrimSpace(bytes.Replace([]byte(msg.Message), newline, space, -1))
-		//fmt.Println(message)
 
 		c.hub.broadcast <- message
 	}
@@ -134,9 +118,6 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-
-
-
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
@@ -158,6 +139,26 @@ func (c *Client) writePump() {
 	}
 }
 
+func (c *Client) Verification(message []byte) (error, Message) {
+
+	var msg Message
+	er := json.Unmarshal(message, &msg)
+	if er != nil {
+		return er, msg
+	}
+	fmt.Println(msg)
+	var key = "sdgsg!@#23435DSFdfdsg;ghfsd"
+	algorithm := jwt.HmacSha256(key)
+	if algorithm.Validate(msg.Token) != nil {
+		c.conn.Close()
+		delete(c.hub.clients, c)
+		close(c.send)
+		return errors.New("Token not verification"), msg
+		
+	}
+	return nil, msg
+}
+
 // serveWs handles websocket requests from the peer.
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -165,9 +166,6 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-
-
-
 
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
 
