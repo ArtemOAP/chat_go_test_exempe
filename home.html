@@ -4,10 +4,43 @@
 <head>
     <title>Chat Example</title>
     <script type="text/javascript">
+
+
+
+
         window.onload = function() {
+
+
+
+
             var conn;
             var msg = document.getElementById("msg");
             var log = document.getElementById("log");
+
+
+var Chat_Tender = {
+    currentDate: function (is_time) {
+
+var now = new Date();
+var dayNum = '',min;
+if (now.getDate() < 10) {
+    dayNum = '0';
+}
+dayNum += now.getDate();
+var monthNum = '';
+if (now.getMonth() + 1 < 10) {
+    monthNum = '0';
+}
+min = (now.getMinutes() < 10)?'0'+now.getMinutes():now.getMinutes();
+monthNum += now.getMonth() + 1;
+var year = now.getFullYear() % 1000;
+
+return is_time? now.getHours() + ':' + min : dayNum + '.' +monthNum;
+
+},
+}
+
+
 
             function appendLog(item) {
                 var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
@@ -29,8 +62,12 @@
                     username: 'jons',
                     message: msg.value,
                     email: 'test@mail.com',
-                    token: '1'
+                    time:'',
+                    linkavatar:'',
+                    token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiNDEiLCJlbWFpbCI6ImRldkBkZXYucnUiLCJmdWxsX25hbWUiOiJkZXYifQ.JiG-iW54JdSjkKoEY4PPw6wvIcuATQFrtIFkuBEKu5s'
                 }
+
+                message.time = Chat_Tender.currentDate(true);
 
 
                 conn.send(JSON.stringify(message));
@@ -48,7 +85,9 @@
                         username: 'jons',
                         message: '@connect',
                         email: 'test@mail.com',
-                        token: '1'
+                        time:'',
+                        linkavatar:'',
+                        token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiNDEiLCJlbWFpbCI6ImRldkBkZXYucnUiLCJmdWxsX25hbWUiOiJkZXYifQ.JiG-iW54JdSjkKoEY4PPw6wvIcuATQFrtIFkuBEKu5s'
                     }));
 
                 };
@@ -62,7 +101,14 @@
                     appendLog(item);
                 };
                 conn.onmessage = function(evt) {
+
+
+
+                   
+
                     var messages = evt.data.split('\n');
+                    var Msg;
+                    console.log(messages);
 
                     if (messages == "@connect") {
                         return
@@ -70,8 +116,13 @@
 
                     for (var i = 0; i < messages.length; i++) {
                         var item = document.createElement("div");
-                        item.innerText = messages[i];
-                        appendLog(item);
+                        
+                        Msg = JSON.parse(messages[i]);
+                        if (Msg.message != "@connect") {
+                            item.innerText = Msg.message + ' '+ ' name:'+Msg.username+'time:'+ Msg.time+ ' linkAvatar:'+Msg.linkavatar;
+                            appendLog(item);
+                            }
+                        
                     }
                 };
             } else {
@@ -80,6 +131,10 @@
                 appendLog(item);
             }
         };
+
+
+
+
     </script>
     <style type="text/css">
         html {

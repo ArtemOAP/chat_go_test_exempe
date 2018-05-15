@@ -5,7 +5,7 @@
 package main
 
 import (
-	"bytes"
+	
 	"log"
 	"net/http"
 	"time"
@@ -50,7 +50,16 @@ type Message struct {
 	Username string `json:"username"`
 	Message  string `json:"message"`
 	Token    string `json:"token"`
+	Time     string `json:"time"`
+	Linkavatar     string `json:"linkavatar"`
 }
+type MessageResponse struct {
+	Username string `json:"username"`
+	Message  string `json:"message"`
+	Time     string `json:"time"`
+	Linkavatar     string `json:"linkavatar"`
+}
+
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
@@ -89,8 +98,13 @@ func (c *Client) readPump() {
 		if e != nil {
 			return
 		}
+		msgj,ej:= json.Marshal(msg)
+		if ej != nil {
+			return
+		}
 
-		message = bytes.TrimSpace(bytes.Replace([]byte(msg.Message), newline, space, -1))
+		//message = bytes.TrimSpace(bytes.Replace([]byte(msg.Message), newline, space, -1))
+		message = []byte(msgj)
 
 		c.hub.broadcast <- message
 	}
@@ -142,12 +156,13 @@ func (c *Client) writePump() {
 	}
 }
 
-func (c *Client) Verification(message []byte) (error, Message) {
+func (c *Client) Verification(message []byte) (error, MessageResponse) {
 
 	var msg Message
+	var msgResp MessageResponse
 	er := json.Unmarshal(message, &msg)
 	if er != nil {
-		return er, msg
+		return er, msgResp
 	}
 	fmt.Println(msg)
 	var key = "sdgsg!@#23435DSFdfdsg;ghfsd"
@@ -156,10 +171,15 @@ func (c *Client) Verification(message []byte) (error, Message) {
 		c.conn.Close()
 		delete(c.hub.clients, c)
 		close(c.send)
-		return errors.New("Token not verification"), msg
+		return errors.New("Token not verification"), msgResp
 		
 	}
-	return nil, msg
+	msgResp.Linkavatar = msg.Linkavatar
+	msgResp.Message = msg.Message
+	msgResp.Time = msg.Time
+	msgResp.Username = msg.Username
+	
+	return nil, msgResp
 }
 
 // serveWs handles websocket requests from the peer.

@@ -22,12 +22,12 @@ func main() {
 
 	hub := newHub()
 	go hub.run()
-	http.HandleFunc("/test", serveHome)
+	//http.HandleFunc("/test", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
 	err := http.ListenAndServe(":8081", nil)
-	//err := http.ListenAndServeTLS("host:8081", "./fullchain1.pem", "./privkey1.pem", nil)
+//	err := http.ListenAndServeTLS("host:8081", "./fullchain1.pem", "./privkey1.pem", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
