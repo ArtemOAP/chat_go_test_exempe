@@ -174,6 +174,13 @@ func (c *Client) Verification(message []byte) (error, MessageResponse) {
 		return errors.New("Token not verification"), msgResp
 		
 	}
+
+	// claims, err := algorithm.Decode(msg.Token)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// user_id, _ := claims.Get("user_id")
+
 	msgResp.Linkavatar = msg.Linkavatar
 	msgResp.Message = msg.Message
 	msgResp.Time = msg.Time
