@@ -58,6 +58,7 @@ type MessageResponse struct {
 	Message  string `json:"message"`
 	Time     string `json:"time"`
 	Linkavatar     string `json:"linkavatar"`
+	Id   int `json:"id"`
 }
 
 
@@ -175,16 +176,22 @@ func (c *Client) Verification(message []byte) (error, MessageResponse) {
 		
 	}
 
-	// claims, err := algorithm.Decode(msg.Token)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// user_id, _ := claims.Get("user_id")
+	claims, err := algorithm.Decode(msg.Token)
+	if err != nil {
+		panic(err)
+	}
+	user_id, _ := claims.Get("user_id")
 
 	msgResp.Linkavatar = msg.Linkavatar
 	msgResp.Message = msg.Message
 	msgResp.Time = msg.Time
 	msgResp.Username = msg.Username
+	userId, ok := user_id.(int)
+	if ok {
+		msgResp.Id = userId
+	}
+	
+
 	
 	return nil, msgResp
 }
