@@ -5,15 +5,17 @@
 package main
 
 import (
-	
 	"log"
 	"net/http"
 	"time"
 
 	"encoding/json"
-	"github.com/robbert229/jwt"
 	"errors"
 	"fmt"
+	"strconv"
+	"sync"
+
+	"github.com/robbert229/jwt"
 
 	"github.com/gorilla/websocket"
 )
@@ -41,26 +43,30 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-        return true
+		return true
 	},
 }
 
 type Message struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Message  string `json:"message"`
-	Token    string `json:"token"`
-	Time     string `json:"time"`
-	Linkavatar     string `json:"linkavatar"`
+	Email      string `json:"email"`
+	Username   string `json:"username"`
+	Message    string `json:"message"`
+	Token      string `json:"token"`
+	Time       string `json:"time"`
+	Linkavatar string `json:"linkavatar"`
+	Lang       string `json:"lang"`
 }
 type MessageResponse struct {
-	Username string `json:"username"`
-	Message  string `json:"message"`
-	Time     string `json:"time"`
-	Linkavatar     string `json:"linkavatar"`
-	Id   int `json:"id"`
+	Username   string `json:"username"`
+	Message    string `json:"message"`
+	Time       string `json:"time"`
+	Linkavatar string `json:"linkavatar"`
+	Id         int    `json:"id"`
+	Lang       string `json:"lang"`
 }
 
+var datamessages []MessageResponse
+var mu sync.RWMutex
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
@@ -99,11 +105,12 @@ func (c *Client) readPump() {
 		if e != nil {
 			return
 		}
-		msgj,ej:= json.Marshal(msg)
+		msgj, ej := json.Marshal(msg)
 		if ej != nil {
 			return
 		}
 
+		fmt.Println(string(msgj))
 		//message = bytes.TrimSpace(bytes.Replace([]byte(msg.Message), newline, space, -1))
 		message = []byte(msgj)
 
@@ -165,7 +172,6 @@ func (c *Client) Verification(message []byte) (error, MessageResponse) {
 	if er != nil {
 		return er, msgResp
 	}
-	fmt.Println(msg)
 	var key = "sdgsg!@#23435DSFdfdsg;ghfsd"
 	algorithm := jwt.HmacSha256(key)
 	if algorithm.Validate(msg.Token) != nil {
@@ -173,7 +179,7 @@ func (c *Client) Verification(message []byte) (error, MessageResponse) {
 		delete(c.hub.clients, c)
 		close(c.send)
 		return errors.New("Token not verification"), msgResp
-		
+
 	}
 
 	claims, err := algorithm.Decode(msg.Token)
@@ -181,19 +187,48 @@ func (c *Client) Verification(message []byte) (error, MessageResponse) {
 		panic(err)
 	}
 	user_id, _ := claims.Get("user_id")
-
 	msgResp.Linkavatar = msg.Linkavatar
 	msgResp.Message = msg.Message
 	msgResp.Time = msg.Time
 	msgResp.Username = msg.Username
-	userId, ok := user_id.(int)
-	if ok {
+	msgResp.Lang = msg.Lang
+	userId, err := strconv.Atoi(user_id.(string))
+	if err == nil {
 		msgResp.Id = userId
 	}
-	
+	if msg.Message != "@connect" {
+		mu.Lock()
+		datamessages = append(datamessages, msgResp)
+		if len(datamessages) > 50 {
+			datamessages = datamessages[1:len(datamessages)]
+		}
+		mu.Unlock()
+	}
 
-	
 	return nil, msgResp
+}
+
+func (c *Client) sendInit() {
+	var message []byte
+	var msgj []byte
+	var ej error
+
+	mu.RLock()
+	for _, ms := range datamessages {
+		fmt.Println(ms)
+		msgj, ej = json.Marshal(ms)
+		if ej != nil {
+			return
+		}
+		message = []byte(msgj)
+		w, err := c.conn.NextWriter(websocket.TextMessage)
+		if err != nil {
+			return
+		}
+		w.Write(message)
+	}
+	mu.RUnlock()
+
 }
 
 // serveWs handles websocket requests from the peer.
@@ -207,6 +242,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
 
 	client.hub.register <- client
+	client.sendInit()
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
