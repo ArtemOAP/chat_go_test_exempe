@@ -203,29 +203,35 @@ func (c *Client) Verification(message []byte) (error, MessageResponse) {
 			datamessages = datamessages[1:len(datamessages)]
 		}
 		mu.Unlock()
+	} else {
+		c.sendInit(msg.Lang)
 	}
 
 	return nil, msgResp
 }
 
-func (c *Client) sendInit() {
+func (c *Client) sendInit(lang string) {
 	var message []byte
 	var msgj []byte
 	var ej error
 
 	mu.RLock()
 	for _, ms := range datamessages {
-		fmt.Println(ms)
-		msgj, ej = json.Marshal(ms)
-		if ej != nil {
-			return
+
+		if lang == ms.Lang {
+			msgj, ej = json.Marshal(ms)
+			if ej != nil {
+				return
+			}
+
+			message = []byte(msgj)
+			w, err := c.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				return
+			}
+			w.Write(message)
 		}
-		message = []byte(msgj)
-		w, err := c.conn.NextWriter(websocket.TextMessage)
-		if err != nil {
-			return
-		}
-		w.Write(message)
+
 	}
 	mu.RUnlock()
 
@@ -242,7 +248,6 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
 
 	client.hub.register <- client
-	client.sendInit()
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
