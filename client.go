@@ -110,7 +110,10 @@ func (c *Client) readPump() {
 			return
 		}
 
-		fmt.Println(string(msgj))
+		if msg.Message != "@connect" {
+			fmt.Println(string(msgj))
+		}
+		
 		//message = bytes.TrimSpace(bytes.Replace([]byte(msg.Message), newline, space, -1))
 		message = []byte(msgj)
 
